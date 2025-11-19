@@ -1,1 +1,7 @@
-
+服务器端先要有一个服务器对象（Server）来注册端口，
+然后监听有没有客户端连接它，此部分需要放到一个死循环，因为不止有一个客户端来连接他，每监听到一个客户端的管道对象，就会把这个管道交给一个新线程对象（ServerReaderThread）去处理
+new ServerReaderThread后，最好把此管道对象通过有参构造传入ServerReaderThread，该线程就可以负责此管道对象的消息处理，主要的任务有两个：接收客户端发来的消息、把接收到的登录消息交给所有客户端的用户列表展示、把接收到的群聊消息交给所有客户端的聊天窗口展示。
+ServerReaderThread需要实现上述功能，它继承了Thread类，是一个线程，它的run方法需要实现功能。重写的run方法先要从管道读取客户端发来的消息类型，拿type记录，type=dis.readInt()。约定好了type为1时，是接收到了登录消息，接着要记录dis.readUTF()，这是客户端发来的用户名，将他放入Server类的静态Map<Socket, String>中，此集合记录的是上线的客户端（管道）和对应的用户名。接着就是将此集合中的在线用户名全部发送到全部客户端里，将此功能定义为updateClientOnLineUserList()方法。type为2时，接收客户端管道发来的信息，在把此信息通过管道发给所有客户端，定义了sendMsgToAll()方法来进行实现。
+updateClientOnLineUserList()：先遍历集合中的每一个管道，在创建其每一个管道对应的特殊字符流，接着                                                 dos.writeInt(1); // 1代表告诉客户端接下来是在线人数列表信息                   dos.writeInt(onLineUsers.size());// 告诉客户端，接下来要发多少个用户名称      接下来在遍历集合的用户名，通过管道发送给对应的客户端。
+sendMsgToAll()：先把要发给每一个客户端的群聊信息通过StringBuilder拼接完成后转为字符串，遍历每一个管道，每次遍历要先writeInt(1);再把消息送入writeUTF();最后记得dos.flush()刷新管道。
+基本功能做完了，接下来我试试能不能独立写出私聊功能。
